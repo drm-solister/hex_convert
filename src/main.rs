@@ -4,38 +4,43 @@ use pancurses::{initscr, endwin};
 use std::i64;
 
 fn main() {
-    // make window and find out how to use getch without adding the character to the screen
+
     let window = init_window();
 
     let mut input_base: u32 = 10;
     let mut input: String = String::from("");
-    let output_bits = 8; // by default will output to 16 bits
-
-
+    let output_bits = 8; // by default will output to 8 bits
     
     loop{
         let c = match window.getch().unwrap() {
             pancurses::Input::Character(char) => char,
             _ => '\0',
         };
-        // only allow o or x in input if it comes after a 0
-        if c.is_digit(input_base){
-            println!("input base: {}", input_base);
-            input.push(c);
-            window.addch(c);
-        }else if (c == 'o' || c == 'x' || c == 'b') && input.chars().next() == Some('0') && input.len() == 1{ // make this neater, with matching?
-            //println!("{:?}", c);
-            window.addch(c);
-            input.push(c);
-        }else if c == '\u{8}' { // backspace
-            input.pop();
-            window.addch(c);
-            window.delch();
-            clear_lines(&window, &[6,9,12,15]);
-        }else if c == '\t' { // switch to setting the number of output bits
-            //println!("{:?}", c);
-        }// if char is escape, end window
-        
+
+        match c {
+            c if c.is_digit(input_base) => {
+                input.push(c);
+                window.addch(c);
+            },
+            c if (c == 'o' || c == 'x' || c == 'b') && input.chars().next() == Some('0') && input.len() == 1 => {
+                input.push(c);
+                window.addch(c);
+            },
+            c if c == '\u{8}' => {
+                input.pop();
+                window.addch(c);
+                window.delch();
+                clear_lines(&window, &[6,9,12,15]);
+            },
+            _ if c == '\u{1b}' => {
+                endwin();
+                std::process::exit(0);
+            },
+            _ if c == '\t' => {
+                println!("switch to setting output bits here");
+            },
+            _ => (),
+        }
 
         input_base = update_base(&input); // try making the reassignment not necessary 
 
@@ -54,7 +59,7 @@ fn init_window() -> pancurses::Window {
 
     window.printw("──────────────────────────────────┬─────────────────────────");
     window.mv(2, 0);
-    window.printw(" input:                           ┃ # of output bits:       ");
+    window.printw(" input:                           ┃ # of output bits:       ┃");
 
     window.mv(5, 0);
     window.printw(" hexadecimal:");
